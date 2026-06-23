@@ -45,6 +45,27 @@
   .key.wide{flex:1.3; max-width:none; font-size:14px;}
   .key.enter{background:var(--green); color:#fff;}
   .key.reset{background:var(--blue); color:#fff;}
+  .ad-banner{
+    width:100vw; max-width:480px; margin:28px auto 8px; overflow:hidden;
+    border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+    padding:10px 0; position:relative;
+  }
+  .ad-label{
+    text-align:center; font-size:11px; color:#666; letter-spacing:1px;
+    margin-bottom:8px; text-transform:uppercase;
+  }
+  .ad-track{
+    display:flex; gap:12px; width:max-content;
+    animation:ad-scroll 18s linear infinite;
+  }
+  .ad-banner:hover .ad-track{ animation-play-state:paused; }
+  .ad-track img{
+    height:120px; border-radius:8px; object-fit:cover; display:block;
+  }
+  @keyframes ad-scroll{
+    from{ transform:translateX(0); }
+    to{ transform:translateX(-50%); }
+  }
 </style>
 </head>
 <body>
@@ -54,6 +75,18 @@
   <div id="preview"></div>
   <p id="msg"></p>
   <div class="keyboard" id="keyboard"></div>
+
+  <div class="ad-banner" aria-label="사진 배너">
+    <div class="ad-label">추억 갤러리</div>
+    <div class="ad-track">
+      <img src="banner1.jpg" alt="" />
+      <img src="banner2.jpg" alt="" />
+      <img src="banner3.jpg" alt="" />
+      <img src="banner1.jpg" alt="" aria-hidden="true" />
+      <img src="banner2.jpg" alt="" aria-hidden="true" />
+      <img src="banner3.jpg" alt="" aria-hidden="true" />
+    </div>
+  </div>
 
 <script>
 /* =======================================================================
@@ -69,21 +102,21 @@
    - 자모 수 빠르게 확인하려면 콘솔에서  countJamo("단어")  를 쓰세요.
    ======================================================================= */
 const WORDS_B64 = [
-  "7IKs656M",
-  "6rWs66aE",
-  "7IKs656R",
-  "67CU656M",
-  "66eI7J2M",
-  "6rCA7Iq0",
-  "6rKo7Jq4",
-  "7Jes66aE",
-  "7ZWY64qY",
-  "67CU7JyE",
-  "6rCA7JyE",
-  "67mE7JyE",
-  "7J207J2R",
-  "6rWQ7ZqM",
-  "7J2Y66as"
+  "7IKs656M","6rWs66aE","7IKs656R","67CU656M","66eI7J2M","6rCA7Iq0","6rKo7Jq4",
+  "7Jes66aE","7ZWY64qY","67CU7JyE","6rCA7JyE","6rWQ7ZqM","7J2Y66as","64W4656Y",
+  "7Iuc6rOE","66qo656Y","7J2Y7J6Q","7Jqw7IKw","7IiY67CV","7Zi467CV","6rCA67Cp",
+  "64aN6rWs","7Iuc6rCE","66eI7J2E","6rCA7J2E","7IKs7Iq0","6rGw67aB","6rCc66+4",
+  "66ek66+4","6rOg656Y","7IOB7Ja0","66m47LmY","6rCI7LmY","66y47Ja0","7IOI7Jqw",
+  "6rCA7J6s","7KGw6rCc","66+47Jet","652866m0","66eM65GQ","6rmA7LmY","66eI64qY",
+  "7JaR7YyM","7J6l66+4","66qo656A","7IiY6rWt","64Kc7LSI","66eI64u5","7Jqw66y8",
+  "67aA7JeM","6rGw7Iuk","64uk6529","7KeA67aV","6riw65Gl","67O164+E","7Iuc7J6l",
+  "67aA7IKw","7ISc7Jq4","7KCc7KO8","66+46rWt","7Yag64G8","7Y+t7Y+s","7IKs66eJ",
+  "7Y+J7JW8","7KeA7KeE","6rCA662E","7ZmN7IiY","6rWs7Iqs","6rWQ7Iuk","7Lmc6rWs",
+  "7J6Q66ek","7IKs7LSM","7IaQ64WA","7IaQ7J6Q","7IKs7JyE","6rGw7Jq4","7IiY6rG0",
+  "6re466aH","7KCR7Iuc","6rWt7J6Q","64uo7LaU","66y066aO","66eI7Iig","66+47Iig",
+  "7IiY7ZWZ","6rWt7Ja0","64+E642V","7Jet7IKs","7Jm47Yis","7KCQ7Y28","7Jqw67CV",
+  "64W47J2E","7KCV7Jik","7KCA64WB","67O066aE","6re466+Q","7LaU7ISd","64uo7Jik",
+  "64+Z7KeA","6rOh7Jqw","67mE7JyE","7J207J2R"
 ];
 const WORD_LEN = 5;     // 모든 정답의 자모 개수 (고정)
 const MAX_TRIES = 5;
@@ -125,21 +158,56 @@ function decompose(str){
 }
 
 const CHO_SET=new Set(CHO), JUNG_SET=new Set(JUNG);
-function compose(jamos){
-  let result="", i=0;
+const JONG_IDX={"":0,"ㄱ":1,"ㄲ":2,"ㄳ":3,"ㄴ":4,"ㄵ":5,"ㄶ":6,"ㄷ":7,"ㄹ":8,"ㄺ":9,"ㄻ":10,"ㄼ":11,"ㄽ":12,"ㄾ":13,"ㄿ":14,"ㅀ":15,"ㅁ":16,"ㅂ":17,"ㅄ":18,"ㅅ":19,"ㅆ":20,"ㅇ":21,"ㅈ":22,"ㅊ":23,"ㅋ":24,"ㅌ":25,"ㅍ":26,"ㅎ":27};
+/* 단모음 두 개 → 복합모음으로 재결합 (분리해서 입력한 걸 글자로 되돌림) */
+const V_MERGE={"ㅗㅏ":"ㅘ","ㅗㅐ":"ㅙ","ㅗㅣ":"ㅚ","ㅜㅓ":"ㅝ","ㅜㅔ":"ㅞ","ㅜㅣ":"ㅟ","ㅡㅣ":"ㅢ","ㅏㅣ":"ㅐ","ㅑㅣ":"ㅒ","ㅓㅣ":"ㅔ","ㅕㅣ":"ㅖ"};
+
+/* 중성 위치에서 모음을 읽되, 가능하면 복합모음으로 합침 */
+function readVowel(jamos, i){
+  if(!JUNG_SET.has(jamos[i])) return null;
+  if(i+1<jamos.length && JUNG_SET.has(jamos[i+1])){
+    const merged=V_MERGE[jamos[i]+jamos[i+1]];
+    if(merged) return {vowel:merged, used:2};
+  }
+  return {vowel:jamos[i], used:1};
+}
+
+/* 자모 배열을 글자 단위로 파싱. 올바른 한글이면 글자 배열, 아니면 null */
+function parseGlyphs(jamos){
+  const glyphs=[]; let i=0;
   while(i<jamos.length){
     const a=jamos[i];
-    if(CHO_SET.has(a) && i+1<jamos.length && JUNG_SET.has(jamos[i+1])){
-      const cho=CHO.indexOf(a), jung=JUNG.indexOf(jamos[i+1]);
-      let jong=0, used=2;
-      if(i+2<jamos.length && !JUNG_SET.has(jamos[i+2])){
-        const ji=JONG.indexOf(jamos[i+2]);
-        const nextIsJung=(i+3<jamos.length)&&JUNG_SET.has(jamos[i+3]);
-        if(ji>0 && !nextIsJung){ jong=ji; used=3; }
-      }
-      result += String.fromCharCode(0xAC00+cho*588+jung*28+jong);
-      i+=used;
-    } else { result+=a; i++; }
+    if(!CHO_SET.has(a)) return null;            // 글자는 자음(초성)으로 시작해야 함
+    const v=readVowel(jamos, i+1);
+    if(!v) return null;                          // 초성 뒤에 모음이 없음
+    let pos=i+1+v.used, jong="";
+    if(pos<jamos.length && CHO_SET.has(jamos[pos])){
+      const nextIsVowel=(pos+1<jamos.length)&&JUNG_SET.has(jamos[pos+1]);
+      if(!nextIsVowel && (jamos[pos] in JONG_IDX)){ jong=jamos[pos]; pos+=1; }
+    }
+    glyphs.push({cho:a, jung:v.vowel, jong});
+    i=pos;
+  }
+  return glyphs;
+}
+function glyphsToStr(g){
+  return g.map(x=>String.fromCharCode(0xAC00 + CHO.indexOf(x.cho)*588 + JUNG.indexOf(x.jung)*28 + (JONG_IDX[x.jong]||0))).join("");
+}
+
+/* 입력 자모가 완전한 한글 단어로 조합되는지 검증 */
+function isValidWord(jamos){ return parseGlyphs(jamos)!==null; }
+
+/* 화면 미리보기용 조합 (조합 불가 부분은 자모 그대로 표시) */
+function compose(jamos){
+  const g=parseGlyphs(jamos);
+  if(g) return glyphsToStr(g);
+  let result="", i=0;
+  while(i<jamos.length){
+    if(CHO_SET.has(jamos[i])){
+      const v=readVowel(jamos, i+1);
+      if(v){ result+=glyphsToStr([{cho:jamos[i], jung:v.vowel, jong:""}]); i+=1+v.used; continue; }
+    }
+    result+=jamos[i]; i++;
   }
   return result;
 }
@@ -217,6 +285,7 @@ function reset(){
 function submit(){
   if(done) return;
   if(current.length!==LEN){ msg.textContent=`자모 ${LEN}개를 모두 채워주세요 (지금 ${current.length}개).`; return; }
+  if(!isValidWord(current)){ msg.textContent="올바른 단어가 아니에요. 글자가 완성되는지 확인해 주세요."; return; }
   const guess=current.slice();
   const marks=score(guess);
   rows.push({jamos:guess,marks});
