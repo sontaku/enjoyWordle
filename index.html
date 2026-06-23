@@ -1,25 +1,185 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>자모 워들</title>
-  <link rel="stylesheet" href="style.css"/>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>오늘의 단어 — 한글 자모 워들</title>
+<style>
+  :root{
+    --bg:#1a1a1a; --surface:#2b2b2b; --text:#f0f0f0; --muted:#9a9a9a;
+    --border:#3a3a3a; --green:#639922; --yellow:#EF9F27; --gray:#5f5e5a;
+    --cell:52px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    min-height:100vh; padding:24px 16px;
+  }
+  h1{font-size:22px; font-weight:500; margin:8px 0 4px;}
+  .sub{font-size:13px; color:var(--muted); margin:0 0 20px;}
+  #board{display:flex; flex-direction:column; gap:6px; align-items:center; margin-bottom:20px;}
+  .row{display:flex; gap:6px;}
+  .cell{
+    width:var(--cell); height:var(--cell);
+    display:flex; align-items:center; justify-content:center;
+    font-size:24px; font-weight:500; border-radius:8px;
+    background:var(--surface); border:1px solid var(--border);
+    transition:background .15s,border .15s;
+  }
+  .cell.empty{background:transparent; border:1px solid var(--border);}
+  .cell.g{background:var(--green); color:#fff; border:none;}
+  .cell.y{background:var(--yellow); color:#412402; border:none;}
+  .cell.b{background:var(--gray); color:#fff; border:none;}
+  .controls{display:flex; gap:8px; width:100%; max-width:300px;}
+  #guess{
+    flex:1; height:44px; padding:0 12px; font-size:16px;
+    background:var(--surface); color:var(--text);
+    border:1px solid var(--border); border-radius:8px;
+  }
+  #guess:focus{outline:none; border-color:var(--green);}
+  #submit{
+    height:44px; padding:0 18px; font-size:15px; font-weight:500;
+    background:var(--surface); color:var(--text);
+    border:1px solid var(--border); border-radius:8px; cursor:pointer;
+  }
+  #submit:hover{background:#363636;}
+  #submit:active{transform:scale(.97);}
+  #submit:disabled,#guess:disabled{opacity:.5; cursor:default;}
+  #msg{font-size:14px; color:var(--muted); min-height:20px; margin:14px 0 0; text-align:center;}
+  .keyboard{margin-top:20px; display:flex; flex-direction:column; gap:6px; align-items:center;}
+  .krow{display:flex; gap:5px; flex-wrap:wrap; justify-content:center; max-width:340px;}
+  .key{
+    min-width:30px; padding:8px 4px; text-align:center; font-size:15px;
+    background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text);
+  }
+  .key.g{background:var(--green); color:#fff; border:none;}
+  .key.y{background:var(--yellow); color:#412402; border:none;}
+  .key.b{background:var(--gray); color:#fff; border:none;}
+</style>
 </head>
-
 <body>
-  <div class="container">
-    <h1>자모 워들</h1>
-
-    <div id="board"></div>
-
-    <div id="input"></div>
-
-    <div class="keyboard" id="keyboard"></div>
-
-    <button onclick="submit()">확인</button>
+  <h1>오늘의 단어</h1>
+  <p class="sub">두 글자 단어를 맞혀보세요</p>
+  <div id="board"></div>
+  <div class="controls">
+    <input id="guess" type="text" placeholder="단어 입력" maxlength="6" autocomplete="off" />
+    <button id="submit">제출</button>
   </div>
+  <p id="msg"></p>
+  <div class="keyboard" id="keyboard"></div>
 
-  <script src="app.js"></script>
+<script>
+/* =======================================================
+   여기만 바꾸면 됩니다 — 정답 단어 설정
+   ======================================================= */
+const ANSWER = "이응";   // ← 원하는 정답 단어로 변경 (글자 수 제한 없음)
+const MAX_TRIES = 5;     // ← 기회 횟수
+/* ======================================================= */
+
+const CHO  = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+const JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
+const JONG = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+
+function decompose(str){
+  const out=[];
+  for(const ch of str){
+    const code = ch.charCodeAt(0) - 0xAC00;
+    if(code < 0 || code > 11171){ out.push(ch); continue; }
+    const cho = Math.floor(code/588);
+    const jung = Math.floor((code%588)/28);
+    const jong = code%28;
+    out.push(CHO[cho]);
+    out.push(JUNG[jung]);
+    if(jong>0){ for(const j of JONG[jong]) out.push(j); }
+  }
+  return out;
+}
+
+const TARGET = decompose(ANSWER);
+const LEN = TARGET.length;
+const board = document.getElementById("board");
+const input = document.getElementById("guess");
+const btn = document.getElementById("submit");
+const msg = document.getElementById("msg");
+const kb = document.getElementById("keyboard");
+let rows = [];
+let done = false;
+const keyState = {};
+
+function renderRow(jamos, marks){
+  const row = document.createElement("div");
+  row.className = "row";
+  for(let i=0;i<LEN;i++){
+    const cell = document.createElement("div");
+    cell.className = "cell" + (marks ? " "+marks[i] : (jamos?"":" empty"));
+    cell.textContent = jamos && jamos[i] ? jamos[i] : "";
+    row.appendChild(cell);
+  }
+  board.appendChild(row);
+}
+function refresh(){
+  board.innerHTML="";
+  rows.forEach(r=>renderRow(r.jamos,r.marks));
+  for(let k=rows.length;k<MAX_TRIES;k++) renderRow(null,null);
+}
+function score(guess){
+  const marks = new Array(LEN).fill("b");
+  const pool = {};
+  for(const t of TARGET) pool[t]=(pool[t]||0)+1;
+  for(let i=0;i<LEN;i++){ if(guess[i]===TARGET[i]){ marks[i]="g"; pool[TARGET[i]]--; } }
+  for(let i=0;i<LEN;i++){
+    if(marks[i]==="g") continue;
+    if(pool[guess[i]]>0){ marks[i]="y"; pool[guess[i]]--; }
+  }
+  return marks;
+}
+function rank(m){ return m==="g"?3:m==="y"?2:1; }
+function buildKeyboard(){
+  const layout=[CHO, JUNG, JONG.filter(j=>j!=="")];
+  kb.innerHTML="";
+  layout.forEach(group=>{
+    const row=document.createElement("div");
+    row.className="krow";
+    group.forEach(j=>{
+      const k=document.createElement("div");
+      k.className="key"+(keyState[j]?" "+keyState[j]:"");
+      k.textContent=j;
+      k.dataset.jamo=j;
+      row.appendChild(k);
+    });
+    kb.appendChild(row);
+  });
+}
+function updateKeys(jamos,marks){
+  for(let i=0;i<LEN;i++){
+    const j=jamos[i], m=marks[i];
+    if(!keyState[j] || rank(m)>rank(keyState[j])) keyState[j]=m;
+  }
+  buildKeyboard();
+}
+function submit(){
+  if(done) return;
+  const val=input.value.trim();
+  if(!val){ msg.textContent="단어를 입력하세요."; return; }
+  const jamos=decompose(val);
+  if(jamos.length!==LEN){ msg.textContent=`자모 ${LEN}개짜리 단어여야 해요 (지금 ${jamos.length}개).`; return; }
+  const marks=score(jamos);
+  rows.push({jamos,marks});
+  updateKeys(jamos,marks);
+  refresh();
+  input.value="";
+  if(marks.every(m=>m==="g")){ done=true; msg.textContent="정답입니다! 🎉"; finish(); return; }
+  if(rows.length>=MAX_TRIES){ done=true; msg.textContent=`기회 소진! 정답은 "${ANSWER}" 였어요.`; finish(); return; }
+  msg.textContent=`${MAX_TRIES-rows.length}번 남았어요.`;
+}
+function finish(){ input.disabled=true; btn.disabled=true; }
+
+btn.addEventListener("click", submit);
+input.addEventListener("keydown", e=>{ if(e.key==="Enter") submit(); });
+refresh();
+buildKeyboard();
+</script>
 </body>
 </html>
