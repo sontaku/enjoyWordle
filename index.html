@@ -57,34 +57,40 @@
 
 <script>
 /* =======================================================================
-   정답 단어 설정
+   정답 단어 설정  ★ 모든 정답은 자모 분리 시 정확히 5개여야 합니다 ★
    -----------------------------------------------------------------------
    - WORDS_B64 배열에 정답 후보를 Base64로 넣어둡니다.
      페이지를 열 때마다 이 중 하나가 무작위로 정답이 됩니다.
-   - 정답을 추가/변경하려면: 아래 addWord() 같은 도구로 인코딩하거나,
-     브라우저 콘솔에서  btoa(unescape(encodeURIComponent("새단어")))  실행해
-     나온 문자열을 배열에 추가하세요.
-   - 평문이 아니라 인코딩이라 소스를 슬쩍 봐도 바로 읽히진 않습니다
-     (단, 작정하고 디코딩하면 보입니다. 완벽한 보안은 아님).
+   - 정답을 추가/변경하려면 브라우저 콘솔에서
+        btoa(unescape(encodeURIComponent("새단어")))
+     를 실행해 나온 문자열을 배열에 추가하세요.
+   - 자모가 5개가 아닌 단어는 아래 코드에서 자동으로 걸러집니다.
+     (콘솔에 경고가 찍히니 개발자도구에서 확인 가능)
+   - 자모 수 빠르게 확인하려면 콘솔에서  countJamo("단어")  를 쓰세요.
    ======================================================================= */
 const WORDS_B64 = [
-  "67mE7JyE",
-  "66y07KeA6rCc",
-  "7ZWZ6rWQ",
-  "7IKs6rO8",
-  "67CU64uk",
+  "7IKs656M",
   "6rWs66aE",
-  "64KY67mE",
-  "7Jqw7Jyg",
-  "64W47J2E",
-  "6rGw66+4"
+  "7IKs656R",
+  "67CU656M",
+  "66eI7J2M",
+  "6rCA7Iq0",
+  "6rKo7Jq4",
+  "7Jes66aE",
+  "7ZWY64qY",
+  "67CU7JyE",
+  "6rCA7JyE",
+  "67mE7JyE",
+  "7J207J2R",
+  "6rWQ7ZqM",
+  "7J2Y66as"
 ];
+const WORD_LEN = 5;     // 모든 정답의 자모 개수 (고정)
 const MAX_TRIES = 5;
 /* ======================================================================= */
 
 function b64decode(b){ return decodeURIComponent(escape(atob(b))); }
 const WORDS = WORDS_B64.map(b64decode);
-const ANSWER = WORDS[Math.floor(Math.random() * WORDS.length)];
 
 const CHO  = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
 const JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
@@ -137,6 +143,22 @@ function compose(jamos){
   }
   return result;
 }
+
+/* 자모 개수 확인용 (콘솔에서 countJamo("단어") 사용 가능) */
+function countJamo(w){ return decompose(w).length; }
+window.countJamo = countJamo;
+
+/* 정확히 WORD_LEN(5)개 자모인 단어만 정답 후보로 사용 */
+const VALID_WORDS = WORDS.filter(w => decompose(w).length === WORD_LEN);
+const REJECTED = WORDS.filter(w => decompose(w).length !== WORD_LEN);
+if(REJECTED.length){
+  console.warn(`[경고] 자모 ${WORD_LEN}개가 아니어서 제외된 단어: ` +
+    REJECTED.map(w => `${w}(${decompose(w).length}개)`).join(", "));
+}
+if(VALID_WORDS.length === 0){
+  throw new Error(`정답 후보가 없습니다. WORDS_B64에 자모 ${WORD_LEN}개짜리 단어를 넣어주세요.`);
+}
+const ANSWER = VALID_WORDS[Math.floor(Math.random() * VALID_WORDS.length)];
 
 const TARGET = decompose(ANSWER);
 const LEN = TARGET.length;
