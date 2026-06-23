@@ -7,7 +7,7 @@
 <style>
   :root{
     --bg:#1a1a1a; --surface:#2b2b2b; --surface2:#363636; --text:#f0f0f0; --muted:#9a9a9a;
-    --border:#3a3a3a; --green:#639922; --yellow:#EF9F27; --gray:#5f5e5a;
+    --border:#3a3a3a; --green:#639922; --yellow:#EF9F27; --gray:#5f5e5a; --blue:#185FA5;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   body{
@@ -18,32 +18,33 @@
   }
   h1{font-size:22px; font-weight:500; margin:6px 0 2px;}
   .sub{font-size:13px; color:var(--muted); margin:0 0 18px;}
-  #board{display:flex; flex-direction:column; gap:6px; align-items:center; margin-bottom:14px;}
+  #board{display:flex; flex-direction:column; gap:6px; align-items:center; margin-bottom:12px;}
   .row{display:flex; gap:6px;}
   .cell{
-    width:52px; height:52px; display:flex; align-items:center; justify-content:center;
-    font-size:24px; font-weight:500; border-radius:8px;
+    width:50px; height:50px; display:flex; align-items:center; justify-content:center;
+    font-size:23px; font-weight:500; border-radius:8px;
     background:var(--surface); border:1px solid var(--border);
   }
   .cell.empty{background:transparent;}
-  .cell.active{border-color:var(--muted);}
+  .cell.active{border-color:var(--muted); border-width:1.5px;}
   .cell.g{background:var(--green); color:#fff; border:none;}
   .cell.y{background:var(--yellow); color:#412402; border:none;}
   .cell.b{background:var(--gray); color:#fff; border:none;}
-  #preview{font-size:18px; min-height:26px; margin:2px 0 4px; letter-spacing:2px; color:var(--text);}
-  #msg{font-size:14px; color:var(--muted); min-height:20px; margin:2px 0 10px; text-align:center;}
+  #preview{font-size:18px; min-height:26px; margin:2px 0 4px; letter-spacing:2px;}
+  #msg{font-size:14px; color:var(--muted); min-height:20px; margin:2px 0 12px; text-align:center;}
   .keyboard{display:flex; flex-direction:column; gap:7px; align-items:center; width:100%; max-width:360px;}
-  .krow{display:flex; gap:6px; justify-content:center; width:100%;}
+  .krow{display:flex; gap:5px; justify-content:center; width:100%;}
   .key{
-    flex:1; max-width:40px; padding:12px 0; text-align:center; font-size:17px; font-weight:500;
+    flex:1; max-width:38px; padding:12px 0; text-align:center; font-size:16px; font-weight:500;
     background:var(--surface2); border:none; border-radius:7px; color:var(--text); cursor:pointer;
   }
   .key:active{background:#454545;}
   .key.g{background:var(--green); color:#fff;}
   .key.y{background:var(--yellow); color:#412402;}
   .key.b{background:var(--gray); color:#fff;}
-  .key.wide{flex:1.6; max-width:none; font-size:14px;}
+  .key.wide{flex:1.3; max-width:none; font-size:14px;}
   .key.enter{background:var(--green); color:#fff;}
+  .key.reset{background:var(--blue); color:#fff;}
 </style>
 </head>
 <body>
@@ -55,66 +56,96 @@
   <div class="keyboard" id="keyboard"></div>
 
 <script>
-/* =======================================================
-   여기만 바꾸면 됩니다 — 정답 단어 설정
-   ======================================================= */
-const ANSWER = "이응";   // 원하는 정답 단어로 변경
-const MAX_TRIES = 5;     // 기회 횟수
-/* ======================================================= */
+/* =======================================================================
+   정답 단어 설정
+   -----------------------------------------------------------------------
+   - WORDS_B64 배열에 정답 후보를 Base64로 넣어둡니다.
+     페이지를 열 때마다 이 중 하나가 무작위로 정답이 됩니다.
+   - 정답을 추가/변경하려면: 아래 addWord() 같은 도구로 인코딩하거나,
+     브라우저 콘솔에서  btoa(unescape(encodeURIComponent("새단어")))  실행해
+     나온 문자열을 배열에 추가하세요.
+   - 평문이 아니라 인코딩이라 소스를 슬쩍 봐도 바로 읽히진 않습니다
+     (단, 작정하고 디코딩하면 보입니다. 완벽한 보안은 아님).
+   ======================================================================= */
+const WORDS_B64 = [
+  "67mE7JyE",
+  "66y07KeA6rCc",
+  "7ZWZ6rWQ",
+  "7IKs6rO8",
+  "67CU64uk",
+  "6rWs66aE",
+  "64KY67mE",
+  "7Jqw7Jyg",
+  "64W47J2E",
+  "6rGw66+4"
+];
+const MAX_TRIES = 5;
+/* ======================================================================= */
+
+function b64decode(b){ return decodeURIComponent(escape(atob(b))); }
+const WORDS = WORDS_B64.map(b64decode);
+const ANSWER = WORDS[Math.floor(Math.random() * WORDS.length)];
 
 const CHO  = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
 const JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
 const JONG = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
-const CHO_SET = new Set(CHO);
-const JUNG_SET = new Set(JUNG);
+
+/* 복합 모음 → 단모음 분리. 예: ㅟ → ㅜ+ㅣ, ㅘ → ㅗ+ㅏ */
+const V_SPLIT = {
+  "ㅐ":["ㅏ","ㅣ"], "ㅒ":["ㅑ","ㅣ"], "ㅔ":["ㅓ","ㅣ"], "ㅖ":["ㅕ","ㅣ"],
+  "ㅘ":["ㅗ","ㅏ"], "ㅙ":["ㅗ","ㅏ","ㅣ"], "ㅚ":["ㅗ","ㅣ"],
+  "ㅝ":["ㅜ","ㅓ"], "ㅞ":["ㅜ","ㅓ","ㅣ"], "ㅟ":["ㅜ","ㅣ"], "ㅢ":["ㅡ","ㅣ"]
+};
+/* 겹받침/쌍자음 → 기본 자모 분리 */
+const C_SPLIT = {
+  "ㄲ":["ㄱ","ㄱ"],"ㄸ":["ㄷ","ㄷ"],"ㅃ":["ㅂ","ㅂ"],"ㅆ":["ㅅ","ㅅ"],"ㅉ":["ㅈ","ㅈ"],
+  "ㄳ":["ㄱ","ㅅ"],"ㄵ":["ㄴ","ㅈ"],"ㄶ":["ㄴ","ㅎ"],"ㄺ":["ㄹ","ㄱ"],"ㄻ":["ㄹ","ㅁ"],
+  "ㄼ":["ㄹ","ㅂ"],"ㄽ":["ㄹ","ㅅ"],"ㄾ":["ㄹ","ㅌ"],"ㄿ":["ㄹ","ㅍ"],"ㅀ":["ㄹ","ㅎ"],"ㅄ":["ㅂ","ㅅ"]
+};
+const splitV = v => V_SPLIT[v] || [v];
+const splitC = c => C_SPLIT[c] || [c];
 
 function decompose(str){
   const out=[];
   for(const ch of str){
     const code = ch.charCodeAt(0) - 0xAC00;
     if(code < 0 || code > 11171){ out.push(ch); continue; }
-    out.push(CHO[Math.floor(code/588)]);
-    out.push(JUNG[Math.floor((code%588)/28)]);
+    splitC(CHO[Math.floor(code/588)]).forEach(j=>out.push(j));
+    splitV(JUNG[Math.floor((code%588)/28)]).forEach(j=>out.push(j));
     const jong = code%28;
-    if(jong>0) for(const j of JONG[jong]) out.push(j);
+    if(jong>0) splitC(JONG[jong]).forEach(j=>out.push(j));
   }
   return out;
 }
 
+const CHO_SET=new Set(CHO), JUNG_SET=new Set(JUNG);
 function compose(jamos){
-  let result="";
-  let i=0;
+  let result="", i=0;
   while(i<jamos.length){
     const a=jamos[i];
     if(CHO_SET.has(a) && i+1<jamos.length && JUNG_SET.has(jamos[i+1])){
-      const cho=CHO.indexOf(a);
-      const jung=JUNG.indexOf(jamos[i+1]);
+      const cho=CHO.indexOf(a), jung=JUNG.indexOf(jamos[i+1]);
       let jong=0, used=2;
       if(i+2<jamos.length && !JUNG_SET.has(jamos[i+2])){
-        const jIdx=JONG.indexOf(jamos[i+2]);
-        const nextIsJung = (i+3<jamos.length) && JUNG_SET.has(jamos[i+3]);
-        if(jIdx>0 && !nextIsJung){ jong=jIdx; used=3; }
+        const ji=JONG.indexOf(jamos[i+2]);
+        const nextIsJung=(i+3<jamos.length)&&JUNG_SET.has(jamos[i+3]);
+        if(ji>0 && !nextIsJung){ jong=ji; used=3; }
       }
-      result += String.fromCharCode(0xAC00 + cho*588 + jung*28 + jong);
+      result += String.fromCharCode(0xAC00+cho*588+jung*28+jong);
       i+=used;
-    } else {
-      result += a; i++;
-    }
+    } else { result+=a; i++; }
   }
   return result;
 }
 
 const TARGET = decompose(ANSWER);
 const LEN = TARGET.length;
-const board = document.getElementById("board");
-const preview = document.getElementById("preview");
-const msg = document.getElementById("msg");
-const kb = document.getElementById("keyboard");
+const board=document.getElementById("board");
+const preview=document.getElementById("preview");
+const msg=document.getElementById("msg");
+const kb=document.getElementById("keyboard");
 
-let rows = [];
-let current = [];
-let done = false;
-const keyState = {};
+let rows=[], current=[], done=false, keyState={};
 
 function renderRow(jamos, marks, isActive){
   const row=document.createElement("div");
@@ -134,9 +165,7 @@ function renderRow(jamos, marks, isActive){
 function refresh(){
   board.innerHTML="";
   rows.forEach(r=>renderRow(r.jamos,r.marks,false));
-  if(!done && rows.length<MAX_TRIES){
-    renderRow(current.slice(),null,true);
-  }
+  if(!done && rows.length<MAX_TRIES) renderRow(current.slice(),null,true);
   for(let k=rows.length+(done?0:1);k<MAX_TRIES;k++) renderRow(null,null,false);
   preview.textContent = current.length ? compose(current) : "";
 }
@@ -151,42 +180,38 @@ function score(guess){
   }
   return marks;
 }
-function rank(m){ return m==="g"?3:m==="y"?2:1; }
-function updateKeys(jamos,marks){
-  for(let i=0;i<LEN;i++){
-    const j=jamos[i], m=marks[i];
-    if(!keyState[j] || rank(m)>rank(keyState[j])) keyState[j]=m;
-  }
-  buildKeyboard();
-}
-function pressJamo(j){
+const rank = m => m==="g"?3:m==="y"?2:1;
+function press(j){
   if(done) return;
   if(current.length>=LEN){ msg.textContent="칸이 가득 찼어요. 제출하거나 지우세요."; return; }
-  current.push(j);
-  msg.textContent="";
-  refresh();
+  current.push(j); msg.textContent=""; refresh();
 }
-function backspace(){
-  if(done || current.length===0) return;
-  current.pop();
-  refresh();
+function backspace(){ if(done||!current.length) return; current.pop(); refresh(); }
+function reset(){
+  rows=[]; current=[]; done=false; keyState={};
+  msg.textContent="다시 도전하세요! (정답은 그대로예요)";
+  buildKeyboard(); refresh();
 }
 function submit(){
   if(done) return;
-  if(current.length!==LEN){ msg.textContent="자모 "+LEN+"개를 모두 채워주세요 (지금 "+current.length+"개)."; return; }
+  if(current.length!==LEN){ msg.textContent=`자모 ${LEN}개를 모두 채워주세요 (지금 ${current.length}개).`; return; }
   const guess=current.slice();
   const marks=score(guess);
   rows.push({jamos:guess,marks});
-  updateKeys(guess,marks);
+  for(let i=0;i<LEN;i++){
+    const j=guess[i], m=marks[i];
+    if(!keyState[j] || rank(m)>rank(keyState[j])) keyState[j]=m;
+  }
   current=[];
   if(marks.every(m=>m==="g")){ done=true; msg.textContent="정답입니다! 🎉"; }
-  else if(rows.length>=MAX_TRIES){ done=true; msg.textContent='기회 소진! 정답은 "'+ANSWER+'" 였어요.'; }
-  else { msg.textContent=(MAX_TRIES-rows.length)+"번 남았어요."; }
-  refresh();
+  else if(rows.length>=MAX_TRIES){ done=true; msg.textContent="기회 소진! '초기화'를 눌러 다시 도전하세요."; }
+  else { msg.textContent=`${MAX_TRIES-rows.length}번 남았어요.`; }
+  buildKeyboard(); refresh();
 }
 
+/* 복합 모음 키 제거 — 단모음만 남김 */
 const KB_LAYOUT=[
-  ["ㅂ","ㅈ","ㄷ","ㄱ","ㅅ","ㅛ","ㅕ","ㅑ","ㅐ","ㅔ"],
+  ["ㅂ","ㅈ","ㄷ","ㄱ","ㅅ","ㅛ","ㅕ","ㅑ"],
   ["ㅁ","ㄴ","ㅇ","ㄹ","ㅎ","ㅗ","ㅓ","ㅏ","ㅣ"],
   ["ㅋ","ㅌ","ㅊ","ㅍ","ㅠ","ㅜ","ㅡ"]
 ];
@@ -199,7 +224,7 @@ function buildKeyboard(){
       const k=document.createElement("button");
       k.className="key"+(keyState[j]?" "+keyState[j]:"");
       k.textContent=j;
-      k.addEventListener("click",()=>pressJamo(j));
+      k.addEventListener("click",()=>press(j));
       row.appendChild(k);
     });
     kb.appendChild(row);
@@ -209,10 +234,13 @@ function buildKeyboard(){
   const del=document.createElement("button");
   del.className="key wide"; del.textContent="⌫ 지우기";
   del.addEventListener("click",backspace);
+  const rst=document.createElement("button");
+  rst.className="key wide reset"; rst.textContent="초기화";
+  rst.addEventListener("click",reset);
   const ent=document.createElement("button");
   ent.className="key wide enter"; ent.textContent="제출";
   ent.addEventListener("click",submit);
-  frow.appendChild(del); frow.appendChild(ent);
+  frow.appendChild(del); frow.appendChild(rst); frow.appendChild(ent);
   kb.appendChild(frow);
 }
 
